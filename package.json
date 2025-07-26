@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "esbuild example/main.ts --bundle --servedir=./example/www/ --outdir=./example/www/js",
-    "build": "esbuild example/main.ts --bundle --minify --outdir=./example/www/js"
+    "start": "esbuild example/src/main.ts --bundle --servedir=./example/www/ --outdir=./example/www/js",
+    "build": "esbuild example/src/main.ts --bundle --minify --outdir=./example/www/js"
   },
   "author": "madcoretom",
   "license": "MIT",

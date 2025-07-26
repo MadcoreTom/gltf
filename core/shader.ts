@@ -96,50 +96,10 @@ export class Shader {
     }
 }
 
-/**
- * Ensures shaders are cached (by vert and frag shader uris)
- */
-// export class ShaderCache {
-//     private readonly cache = new Map<string, Shader | Promise<Shader>>();
-
-//     public async getShader(gl: WebGL2RenderingContext, vertUri: string, fragUri: string): Promise<Shader> {
-//         const key = vertUri + "\t" + fragUri;
-//         const cached = this.cache.get(key);
-//         if (cached) {
-//             if (cached instanceof Promise) {
-//                 console.log("SHADER wait");
-//                 return cached;
-//             } else {
-//                 console.log("SHADER cached");
-//                 return cached
-//             }
-//         } else {
-//             console.log("SHADER load");
-//             const promise = new Promise<Shader>((resolve, reject) => {
-//                 this.loadShader(gl, vertUri, fragUri)
-//                     .then(s => {
-//                         console.log("SHADER loaded", key);
-//                         this.cache.set(key, s);
-//                         resolve(s);
-//                     })
-//                     .catch(e => {
-//                         console.error(`Failed to load ${key}`, e);
-//                         reject(`Failed to load ${key}`);
-//                     }
-//                     );
-//             });
-//             this.cache.set(key, promise);
-//             return promise;
-//         }
-//     }
-
-//     private async loadShader(gl: WebGL2RenderingContext, vertUri: string, fragUri: string): Promise<Shader> {
-//         const vertResponse = await fetch(vertUri);
-//         const fragResponse = await fetch(fragUri);
-//         const vertText = await vertResponse.text();
-//         const fragText = await fragResponse.text();
-//         return new Shader(gl, vertText, fragText).compile();
-//     }
-// }
-
-// export const SHADER_CACHE = new ShaderCache();
+ export async function loadShader(gl: WebGL2RenderingContext, vertUri: string, fragUri: string): Promise<Shader> {
+    const vertResponse = await fetch(vertUri);
+    const fragResponse = await fetch(fragUri);
+    const vertText = await vertResponse.text();
+    const fragText = await fragResponse.text();
+    return new Shader(gl, vertText, fragText).compile();
+}

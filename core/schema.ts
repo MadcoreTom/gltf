@@ -1,20 +1,20 @@
 // TODO incomplete
 
-export type XGltf = {
+export type Gltf = {
     asset: any,
     scene: number,
     scenes: any[],
     nodes: any[],
     animations: any[],
     materials: any[],
-    meshes: XGltfMesh[],
+    meshes: GltfMesh[],
     skins: any[],
-    accessors: XGltfAcceesor[],
-    bufferViews: XGltfBufferView[],
-    buffers: XGltfBufferer[]
+    accessors: GltfAcceesor[],
+    bufferViews: GltfBufferView[],
+    buffers: GltfBuffer[]
 }
 
-export type XGltfAcceesor = {
+export type GltfAcceesor = {
     /**  IDX of bufferViews */
     bufferView: number,
     componentType: 5121 | 5123 | 5126,
@@ -23,7 +23,7 @@ export type XGltfAcceesor = {
     type: "VEC4" | "VEC3" | "SCALAR"
 }
 
-export type XGltfBufferView = {
+export type GltfBufferView = {
     /**  IDX of buffers */
     buffer: number,
     byteLength: number,
@@ -32,16 +32,16 @@ export type XGltfBufferView = {
     target: number
 }
 
-export type XGltfBufferer = {
+export type GltfBuffer = {
     byteLength: number;
     uri: string
 }
-export type XGltfMesh = {
+export type GltfMesh = {
     name?: string,
-    primitives: XGltfMeshPrimitive[]
+    primitives: GltfMeshPrimitive[]
 }
 
-export type XGltfMeshPrimitive = {
+export type GltfMeshPrimitive = {
     attributes: { [key: string]: number },
     indices: number,
     material: number
