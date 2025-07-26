@@ -20,7 +20,7 @@ export type GltfAcceesor = {
     componentType: 5121 | 5123 | 5126,
     count: number,
     normalized?: boolean,
-    type: "VEC4" | "VEC3" | "SCALAR"
+    type: "VEC4" | "VEC3" | "VEC2" | "SCALAR"
 }
 
 export type GltfBufferView = {

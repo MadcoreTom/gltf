@@ -3,7 +3,6 @@ import { Shader } from "./shader";
 import { getGlTypeForComponentType } from "./util";
 
 type MaterialAttr = {
-    attributeToLocation: { [attr: string]: number },
     materialToUniform: { [prop: string]: string };
 }
 
@@ -46,7 +45,7 @@ export class GltfWrapper {
         return this;
     }
 
-    private applyShader(primitive: GltfMeshPrimitive): { [attr: string]: number } {
+    private applyShader(primitive: GltfMeshPrimitive): Shader | undefined {
         // TODO probably cache materials, there's a bit of fiddling here we don't want to do per frame
         const mat = this.gltf.materials[primitive.material];
         this.assert(!!mat, "Material not found", primitive.material);
@@ -56,9 +55,9 @@ export class GltfWrapper {
 
         // Find first shader that match the requirements
         // TODO maybe find best, or sort them first?
-        const shader = this.shaders.filter(([attr]) => {
+        const shader = this.shaders.filter(([attr, sh]) => {
             // matches if there are 0 not-found attr in attributes
-            let matches = Object.keys(attr.attributeToLocation).filter(a => attributes.indexOf(a) < 0).length == 0;
+            let matches = sh.getSupportedAttributes().filter(a => attributes.indexOf(a) < 0).length == 0;
             // matches if this property exists in the material
             matches &&= Object.entries(attr.materialToUniform).filter(([path, uniform]) => {
                 const parts = path.split(".");
@@ -84,20 +83,12 @@ export class GltfWrapper {
 
         if (shader) {
             shader[1].useProgram();
-            // TODO get this mappnig from somewhere
-            const r = {
-                POSITION: shader[1].getLocation("pos"),
-                NORMAL: shader[1].getLocation("norm"),
-                TEXCOORD_0: shader[1].getLocation("tex")
-            }
-            // console.log(r);
             // apply uniforms
             Object.entries(uniforms).forEach(([k, v]) => shader[1].setVec4(k, v)); // TODO support more than vec4
-            return r;
+            return shader[1];
         }
 
-        // TODO needs to return location map
-        return {};
+        return undefined;
     }
 
     // function to render nodes by name or id
@@ -110,17 +101,18 @@ export class GltfWrapper {
     }
 
     private drawPrimitive(primitive: GltfMeshPrimitive) {
-        // TODO - have the assumption of POSITION, NORMAL, TEXCOORD_0
-        const loc = this.applyShader(primitive);
-        // it depends on the shader, which depends on available attributes plus material
-        this.bindAccessorById(loc.POSITION, primitive.attributes["POSITION"], 3);
-        this.bindAccessorById(loc.NORMAL, primitive.attributes["NORMAL"], 3);
-        this.bindAccessorById(loc.TEXCOORD_0, primitive.attributes["TEXCOORD_0"], 2);
-        // indices
-        this.drawElementsByAccessorId(primitive.indices);
+        const shader = this.applyShader(primitive);
+        if (shader) {
+            // it depends on the shader, which depends on available attributes plus material
+            shader.forEachAttribute((name, loc) =>
+                this.bindAccessorById(loc, primitive.attributes[name])
+            );
+            // indices
+            this.drawElementsByAccessorId(primitive.indices);
+        }
     }
 
-    private bindAccessorById(location: GLuint, accessorIdx: number, componentCount: number) {
+    private bindAccessorById(location: GLuint, accessorIdx: number) {
         const ac: GltfAcceesor = this.gltf.accessors[accessorIdx];
         this.assert(!!ac, "Accessor not found", accessorIdx);
         const glType = getGlTypeForComponentType(ac.componentType);
@@ -133,6 +125,7 @@ export class GltfWrapper {
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferViews[ac.bufferView]);
         // TODO what the heck is bv.byteLength for?
         // this.gl.vertexAttribPointer(location, componentCount, glType, false, bv.byteStride || 0, bv.byteOffset);
+        let componentCount = ac.type == "VEC2" ? 2 : 3; // TODO do better
         this.gl.vertexAttribPointer(location, componentCount, glType, false, 0, 0);
     }
 
