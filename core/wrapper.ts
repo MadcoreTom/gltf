@@ -12,6 +12,7 @@ export class GltfWrapper {
     private meshNames: Map<string, number> = new Map();
     private shaders: [MaterialAttr, Shader][] = [];
     private bufferViews: WebGLBuffer[] = []
+    private nodeMats: mat4[] = [];
     public constructor(private readonly gl: WebGL2RenderingContext, private readonly gltf: Gltf) {
         gltf.nodes.forEach((n, i) => {
             this.nodeNames.set(n.name as string, i);
@@ -168,16 +169,21 @@ export class GltfWrapper {
         }
         const node = this.gltf.nodes[nodeIdx];
 
-        const mat = mat4.clone(world);
-          if (node.translation) {
-            mat4.translate(mat, mat, node.translation);
+        let mat = mat4.clone(world);;
+        if (!this.nodeMats[nodeIdx]) {
+            const nm = mat4.create();
+            if (node.translation) {
+                mat4.translate(nm, nm, node.translation);
+            }
+            if (node.rotation) {
+                mat4.multiply(nm, nm, mat4.fromQuat(mat4.create(), node.rotation));
+            }
+            if (node.scale) {
+                mat4.scale(nm, nm, node.scale);
+            }
+            this.nodeMats[nodeIdx] = nm;
         }
-        if (node.rotation) {
-            mat4.multiply(mat,mat, mat4.fromQuat(mat4.create(), node.rotation));
-        }
-        if (node.scale) {
-            mat4.scale(mat, mat, node.scale);
-        }
+        mat4.multiply(mat, mat, this.nodeMats[nodeIdx]);
 
         if (node.mesh !== undefined) {
             this.drawMeshById(node.mesh, mat, camera);

@@ -35,6 +35,7 @@ export class MainComponent extends HTMLElement {
 
         // list demos
         const list = document.createElement("ul");
+        list.style.color = "white";        
         DEMOS.forEach(d=>{
             const item = document.createElement("li");
             list.appendChild(item);
@@ -83,7 +84,7 @@ export class MainComponent extends HTMLElement {
 
     private onFrame(time: number) {
         const { gl, gltf } = this;
-        gl.clearColor(0.25, 0.25, 0.25, 1);
+        gl.clearColor(56/225*0.7,59/225*0.7, 72/225*0.7, 1);
         gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
         gl.disable(gl.CULL_FACE);
         gl.frontFace(gl.CW);
