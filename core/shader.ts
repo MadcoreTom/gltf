@@ -1,4 +1,4 @@
-import { mat4, vec4 } from "gl-matrix";
+import { mat4, ReadonlyMat4, vec4 } from "gl-matrix";
 
 export class Shader {
     private program: WebGLProgram | null;
@@ -67,10 +67,10 @@ export class Shader {
         })
     }
 
-    public setWorld(world: mat4) {
+    public setWorld(world: ReadonlyMat4) {
         this.gl.uniformMatrix4fv(this.worldLoc, false, world);
     }
-    public setCamera(camera: mat4) {
+    public setCamera(camera: ReadonlyMat4) {
         this.gl.uniformMatrix4fv(this.cameraLoc, false, camera);
     }
 

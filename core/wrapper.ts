@@ -1,3 +1,4 @@
+import { mat4, ReadonlyMat4 } from "gl-matrix";
 import { Gltf, GltfAcceesor, GltfBufferView, GltfMeshPrimitive } from "./schema";
 import { Shader } from "./shader";
 import { getGlTypeForComponentType } from "./util";
@@ -13,7 +14,7 @@ export class GltfWrapper {
     private bufferViews: WebGLBuffer[] = []
     public constructor(private readonly gl: WebGL2RenderingContext, private readonly gltf: Gltf) {
         gltf.nodes.forEach((n, i) => {
-            this.nodeNames.set(n.name, i);
+            this.nodeNames.set(n.name as string, i);
         });
         gltf.meshes.forEach((m, i) => {
             m.name != null && this.meshNames.set(m.name, i);
@@ -94,19 +95,21 @@ export class GltfWrapper {
     // function to render nodes by name or id
     // function to render mesh by name or id
 
-    public drawMeshById(meshId: number) {
+    public drawMeshById(meshId: number, world:ReadonlyMat4, camera:ReadonlyMat4) {
         const mesh = this.gltf.meshes[meshId];
         this.assert(!!mesh, "Mesh not found", meshId);
-        mesh.primitives.forEach(primitive => this.drawPrimitive(primitive));
+        mesh.primitives.forEach(primitive => this.drawPrimitive(primitive, world, camera));
     }
 
-    private drawPrimitive(primitive: GltfMeshPrimitive) {
+    private drawPrimitive(primitive: GltfMeshPrimitive, world:ReadonlyMat4, camera:ReadonlyMat4) {
         const shader = this.applyShader(primitive);
         if (shader) {
             // it depends on the shader, which depends on available attributes plus material
             shader.forEachAttribute((name, loc) =>
                 this.bindAccessorById(loc, primitive.attributes[name])
             );
+            shader.setWorld(world);
+            shader.setCamera(camera);
             // indices
             this.drawElementsByAccessorId(primitive.indices);
         }
@@ -149,4 +152,55 @@ export class GltfWrapper {
             console.warn(message, args);
         }
     }
+
+    public drawScene(scene: number, camera: mat4, world: mat4) {
+        const s = this.gltf.scenes[scene];
+        this.assert(!!s, "Scene not found", scene);
+        s.nodes.forEach(nodeIdx =>
+            this.walkNode(nodeIdx, camera, world, [])
+        );
+    }
+
+    private walkNode(nodeIdx: number, camera: ReadonlyMat4, world: ReadonlyMat4, depth: number[]) {
+        if (depth.length > 20) {
+            console.warn("Depth exceeded with node", depth);
+            return;
+        }
+        const node = this.gltf.nodes[nodeIdx];
+
+        const mat = mat4.clone(world);
+          if (node.translation) {
+            mat4.translate(mat, mat, node.translation);
+        }
+        if (node.rotation) {
+            mat4.multiply(mat,mat, mat4.fromQuat(mat4.create(), node.rotation));
+        }
+        if (node.scale) {
+            mat4.scale(mat, mat, node.scale);
+        }
+
+        if (node.mesh !== undefined) {
+            this.drawMeshById(node.mesh, mat, camera);
+        }
+
+        if (node.children) {
+            node.children.forEach(child => this.walkNode(child, camera, mat, [...depth, nodeIdx]));
+        }
+    }
+
+    
+    // private walkNode<S>(nodeIdx: number, state: S, callback: GltfNodeCallback<S>, depth:number[]) {
+    //     if(depth.length > 20){
+    //         console.warn("Depth exceeded with node", depth);
+    //         return;
+    //     }
+    //     const childState = callback(nodeIdx, state, this);
+    //     const node = this.gltf.nodes[nodeIdx];
+    //     if (node.children) {
+    //         node.children.forEach(child => this.walkNode(child, childState, callback, [...depth, nodeIdx]));
+    //     }
+    // }
 }
+
+
+// export type GltfNodeCallback<S> = (nodeIdx: number, state: S, gltfw: GltfWrapper) => S;

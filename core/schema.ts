@@ -1,10 +1,12 @@
 // TODO incomplete
 
+import { quat, vec3, vec4 } from "gl-matrix"
+
 export type Gltf = {
     asset: any,
     scene: number,
-    scenes: any[],
-    nodes: any[],
+    scenes: GltfScene[],
+    nodes: GltfNode[],
     animations: any[],
     materials: any[],
     meshes: GltfMesh[],
@@ -45,4 +47,17 @@ export type GltfMeshPrimitive = {
     attributes: { [key: string]: number },
     indices: number,
     material: number
+}
+
+export type GltfNode = {
+    mesh?: number,
+    name?: string,
+    rotation?: quat,
+    scale?: vec3,
+    translation?: vec3,
+    children?: number[]
+}
+export type GltfScene = {
+    name?: string,
+    nodes: number[]
 }

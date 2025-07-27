@@ -13,7 +13,6 @@ export class MainComponent extends HTMLElement {
     private canvas: HTMLCanvasElement;
     private gl: WebGL2RenderingContext;
     private gltf: GltfWrapper;
-    private shader: Shader; // TODO remove
 
     constructor() {
         super();
@@ -60,7 +59,7 @@ export class MainComponent extends HTMLElement {
         this.gltf = await load(this.gl, window.location.origin + dir, name);
         // shaders
         // this.shader = await loadShader(this.gl, "assets/shaders/vert.glsl", "assets/shaders/frag-col.glsl");
-        this.shader = await new ShaderBuilder(this.gl)
+        const shader = await new ShaderBuilder(this.gl)
             .vert("assets/shaders/vert.glsl")
             .frag("assets/shaders/frag-col.glsl")
             .worldMat("uModelMat")
@@ -70,7 +69,7 @@ export class MainComponent extends HTMLElement {
             .attribute("aTex","TEXCOORD_0")
             .build();
         this.gltf.addShader(
-            this.shader,
+            shader,
             {
                 materialToUniform: {
                     "pbrMetallicRoughness.baseColorFactor": "col"
@@ -83,20 +82,20 @@ export class MainComponent extends HTMLElement {
     }
 
     private onFrame(time: number) {
-        const { gl, gltf, shader } = this;
+        const { gl, gltf } = this;
         gl.clearColor(0.25, 0.25, 0.25, 1);
         gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
         gl.disable(gl.CULL_FACE);
         gl.frontFace(gl.CW);
         gl.cullFace(gl.BACK);
         gl.enable(gl.DEPTH_TEST);
-        // TODO id rather not change values from the outside
-        shader.useProgram();
-        shader.setWorld( mat4.fromRotation(mat4.create(), time / 1000, vec3.normalize(vec3.create(), [1, 2 + 9*Math.sin(time/2000), 3])));
-        shader.setCamera(mat4.translate(mat4.create(),mat4.perspective(mat4.create(),80,1,0.1,100),[0,0,-2]));
 
-        // TODO probably pass in matriciessince it might change the shader
-        gltf.drawMeshById(0);
+        const world = mat4.fromRotation(mat4.create(), time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
+        mat4.rotate(world, world,Math.PI, [0,0,1]);
+        const camera = mat4.translate(mat4.create(), mat4.perspective(mat4.create(), 80, 1, 0.1, 100), [0, 0, -2]);
+
+        // gltf.drawMeshById(0, world, camera);
+        gltf.drawScene(0, camera, world);
         window.requestAnimationFrame(t=>this.onFrame(t));
     }
 
