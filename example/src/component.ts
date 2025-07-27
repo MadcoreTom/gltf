@@ -3,6 +3,12 @@ import { load } from "../../core/parser";
 import { Shader, ShaderBuilder } from "../../core/shader";
 import { GltfWrapper } from "../../core/wrapper";
 
+const DEMOS:[string,string][]  = [
+    ["/assets/", "test3.gltf"],
+    ["/assets/", "monkey.gltf"],
+    ["/assets/", "windmill.gltf"]
+]
+
 export class MainComponent extends HTMLElement {
     private canvas: HTMLCanvasElement;
     private gl: WebGL2RenderingContext;
@@ -28,13 +34,30 @@ export class MainComponent extends HTMLElement {
         this.canvas.addEventListener("click", evt => { this.onClick(evt.offsetX, evt.offsetY, true) });
         this.canvas.addEventListener("contextmenu", evt => { this.onClick(evt.offsetX, evt.offsetY, false); evt.preventDefault() });
 
+        // list demos
+        const list = document.createElement("ul");
+        DEMOS.forEach(d=>{
+            const item = document.createElement("li");
+            list.appendChild(item);
+
+            const link = document.createElement("a");
+            link.href = "/?name=" + d[1];
+            link.textContent = d[1];
+            link.style.color = "yellow";
+            item.appendChild(link);
+        });
+        shadowRoot.appendChild(list);
+
         // Load content
+        const selected = new URLSearchParams(window.location.search).get("name");
+        const demo = DEMOS.filter(d=>d[1] === selected);
+        demo.push(DEMOS[0]); // default
         this.gl = this.canvas.getContext("webgl2") as WebGL2RenderingContext;
-        this.load();
+        this.load(...demo[0]);
     }
 
-    private async load() {
-        this.gltf = await load(this.gl, window.location.origin + "/assets/", "monkey.gltf");
+    private async load(dir:string, name:string) {
+        this.gltf = await load(this.gl, window.location.origin + dir, name);
         // shaders
         // this.shader = await loadShader(this.gl, "assets/shaders/vert.glsl", "assets/shaders/frag-col.glsl");
         this.shader = await new ShaderBuilder(this.gl)
