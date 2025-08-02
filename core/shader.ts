@@ -58,7 +58,12 @@ export class Shader {
     }
 
     public setVec4(name: string, v: vec4) {
-        this.gl.uniform4fv(this.uniform[name], v);
+        if (v.length >= 4) {
+            this.gl.uniform4fv(this.uniform[name], v);
+        } else if (v.length == 3) {
+            // in case alpha is missing
+            this.gl.uniform4fv(this.uniform[name], [...v, 1.0]);
+        }
     }
 
     public setMat4s(name: string, m: mat4[]) {

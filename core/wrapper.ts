@@ -53,41 +53,38 @@ export class GltfWrapper {
         this.assert(!!mat, "Material not found", primitive.material);
         const attributes = Object.keys(primitive.attributes);
         // console.log("ATTRS", attributes);
-        let uniforms: { [key: string]: any } = {};
 
         // Find first shader that match the requirements
         // TODO maybe find best, or sort them first?
-        const shader = this.shaders.filter(([attr, sh]) => {
+        const results = this.shaders.map(([attr, sh]) => {
             // matches if there are 0 not-found attr in attributes
             let matches = sh.getSupportedAttributes().filter(a => attributes.indexOf(a) < 0).length == 0;
-            // matches if this property exists in the material
+            // matches if this property exists in the material     
+            let uniforms: { [key: string]: any } = {};
             matches &&= Object.entries(attr.materialToUniform).filter(([path, uniform]) => {
                 const parts = path.split(".");
                 let cur = mat;
                 while (parts.length > 0) {
                     const p = parts.shift() as string;
                     cur = cur[p];
-                    if (!cur) {
-                        console.warn("Could not find path", path, "in", mat)
-                        return true; // true means it didnt match
-                    }
+                    // console.log(p,!!cur)
                 }
-                uniforms[uniform] = cur;
-                return false;
+                
+                uniforms[uniform] = cur ? cur :  [0.5,0.5,0.5,1.0];
+                return cur == undefined;
             }).length == 0; // no trues = nothing wasnt found (double negative)
-            return matches;
-        })[0];
+            return {matches,uniforms,shader:sh};
+        }).filter(s=>s.matches);
+        const {shader,uniforms} = results[0];
 
         // TODO maybe it should get all the maps
         // needs to set the uniforms
 
-        // console.log("SHADER", shader);
-
         if (shader) {
-            shader[1].useProgram();
+            shader.useProgram();
             // apply uniforms
-            Object.entries(uniforms).forEach(([k, v]) => shader[1].setVec4(k, v)); // TODO support more than vec4
-            return shader[1];
+            Object.entries(uniforms).forEach(([k, v]) => shader.setVec4(k, v)); // TODO support more than vec4
+            return shader;
         }
 
         return undefined;

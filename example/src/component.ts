@@ -6,7 +6,9 @@ import { GltfWrapper } from "../../core/wrapper";
 const DEMOS:[string,string][]  = [
     ["/assets/", "test3.gltf"],
     ["/assets/", "monkey.gltf"],
-    ["/assets/", "windmill.gltf"]
+    ["/assets/", "windmill.gltf"],
+    ["/assets/notmine/", "scene.gltf"],
+    ["/assets/car/", "untitled.gltf"]
 ]
 
 export class MainComponent extends HTMLElement {
@@ -69,6 +71,14 @@ export class MainComponent extends HTMLElement {
             .attribute("aNorm","NORMAL")
             .attribute("aTex","TEXCOORD_0")
             .build();
+        this.gltf.addShader(
+            shader,
+            {
+                materialToUniform: {
+                    "emissiveFactor": "col"
+                }
+            }
+        );
         this.gltf.addShader(
             shader,
             {
