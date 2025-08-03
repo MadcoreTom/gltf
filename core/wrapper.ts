@@ -1,5 +1,5 @@
 import { mat4, ReadonlyMat4 } from "gl-matrix";
-import { Gltf, GltfAcceesor, GltfBufferView, GltfMeshPrimitive } from "./schema";
+import { Gltf, GltfAcceesor, GltfBufferView, GltfMeshPrimitive, GltfNode } from "./schema";
 import { Shader } from "./shader";
 import { getGlTypeForComponentType } from "./util";
 
@@ -157,6 +157,15 @@ export class GltfWrapper {
         s.nodes.forEach(nodeIdx =>
             this.walkNode(nodeIdx, camera, world, [])
         );
+    }
+
+    public getNodeByName(name:string): GltfNode |undefined{
+        const idx = this.nodeNames.get(name);
+        if(idx !== undefined){
+            delete this.nodeMats[idx];
+            return this.gltf.nodes[idx];
+        }
+        return undefined;
     }
 
     private walkNode(nodeIdx: number, camera: ReadonlyMat4, world: ReadonlyMat4, depth: number[]) {

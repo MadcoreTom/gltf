@@ -1,6 +1,6 @@
 // TODO incomplete
 
-import { quat, vec3, vec4 } from "gl-matrix"
+import { quat2, vec3 } from "gl-matrix"
 
 export type Gltf = {
     asset: any,
@@ -52,7 +52,7 @@ export type GltfMeshPrimitive = {
 export type GltfNode = {
     mesh?: number,
     name?: string,
-    rotation?: quat,
+    rotation?: quat2,
     scale?: vec3,
     translation?: vec3,
     children?: number[]

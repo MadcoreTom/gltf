@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "esbuild example/src/main.ts --bundle --servedir=./example/www/ --outdir=./example/www/js",
-    "build": "esbuild example/src/main.ts --bundle --minify --outdir=./example/www/js"
+    "build": "esbuild example/src/main.ts --bundle --minify --outdir=./example/www/js",
+    "race-start": "esbuild racing/src/main.ts --bundle --servedir=./racing/www/ --outdir=./racing/www/js",
+    "race-build": "esbuild racing/src/main.ts --bundle --minify --outdir=./racing/www/js"
   },
   "author": "madcoretom",
   "license": "MIT",
