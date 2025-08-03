@@ -12,6 +12,7 @@ export class MainComponent extends HTMLElement {
     private canvas: HTMLCanvasElement;
     private gl: WebGL2RenderingContext;
     private gltf: GltfWrapper;
+    private track: GltfWrapper;
     private vw: number;
     private vh: number;
     private state: State;
@@ -71,6 +72,26 @@ export class MainComponent extends HTMLElement {
             }
         );
 
+        // track
+   this.track = await load(this.gl, window.location.origin + "/assets/", "debug.gltf");
+        // shaders
+        this.track.addShader(
+            shader,
+            {
+                materialToUniform: {
+                    "emissiveFactor": "col"
+                }
+            }
+        );
+        this.track.addShader(
+            shader,
+            {
+                materialToUniform: {
+                    "pbrMetallicRoughness.baseColorFactor": "col"
+                }
+            }
+        );
+
         const keybord = new Keyboard(window, {
             "KeyW": Controls.ACCEL,
             "ArrowUp": Controls.ACCEL,
@@ -80,7 +101,7 @@ export class MainComponent extends HTMLElement {
             "ArrowRight": Controls.RIGHT
         });
 
-        this.state = initState(keybord, this.gltf);
+        this.state = initState(keybord, this.gltf, this.track);
 
         console.log("Ready for the first frame")
         window.requestAnimationFrame(t => this.onFrame(t));
@@ -88,16 +109,21 @@ export class MainComponent extends HTMLElement {
 
     private onFrame(time: number) {
         const { gl, gltf } = this;
-        gl.clearColor(56 / 225 * 0.7, 59 / 225 * 0.7, 72 / 225 * 0.7, 1);
+        gl.clearColor(0.047, 0.800, 0.996, 1);
         gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
         gl.disable(gl.CULL_FACE);
         gl.frontFace(gl.CW);
         gl.cullFace(gl.BACK);
         gl.enable(gl.DEPTH_TEST);
 
-        const world = mat4.fromRotation(mat4.create(), time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
-        mat4.rotate(world, world, Math.PI, [0, 0, 1]);
-        const camera = mat4.translate(mat4.create(), mat4.perspective(mat4.create(), 80, this.vw / this.vh, 0.1, 100), [0, 0, -3]);
+        const world = mat4.create();//mat4.fromRotation(mat4.create(), time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
+        mat4.translate(world, world, this.state.car.pos);
+        mat4.rotateY(world, world, this.state.car.yaw);
+        // mat4.rotate(world, world, Math.PI, [0, 0, 1]);
+        const camera = mat4.create();
+        mat4.perspective(camera, 80, this.vw / this.vh, 0.1, 100);
+        mat4.multiply(camera, camera, mat4.lookAt(mat4.create(), this.state.camera, [this.state.car.pos[0],3,this.state.car.pos[2]], [0,-1,0]));
+        // const camera = mat4.translate(mat4.create(), mat4.perspective(mat4.create(), 80, this.vw / this.vh, 0.1, 100), [0, 0, -3]);
 
         // updates
         this.state.deltaTime = Math.min(100, time - this.state.time);
@@ -106,6 +132,7 @@ export class MainComponent extends HTMLElement {
 
         // gltf.drawMeshById(0, world, camera);
         gltf.drawScene(0, camera, world);
+        this.track.drawScene(0, camera, mat4.create());
         window.requestAnimationFrame(t => this.onFrame(t));
 
     }

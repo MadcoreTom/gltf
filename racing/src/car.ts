@@ -5,18 +5,26 @@ import { State } from "./state";
 export function updateCar(state: State) {
     const { car, gltf } = state;
 
-    car.wheelAngle += state.keyboard.isDown(Controls.ACCEL) ? state.deltaTime / 100 : 0;
+    const movement = state.keyboard.isDown(Controls.ACCEL) ? state.deltaTime / 100 : 0;
+    const diameter = 0.2; // i made this up. please measure it
+
+    car.wheelAngle += (movement / (Math.PI * diameter)) * Math.PI * 2;// factorize if it works
     const w = car.wheelAngle;
 
+    car.pos[0] -= Math.cos(-car.yaw) * movement;
+    car.pos[2] -= Math.sin(-car.yaw) * movement;
+
     let steerTarget = 0;
-    if(state.keyboard.isDown(Controls.RIGHT)){
-        steerTarget = 1;
-    }
-    if(state.keyboard.isDown(Controls.LEFT)){
+    if (state.keyboard.isDown(Controls.RIGHT)) {
         steerTarget = -1;
     }
-    // car.steer = car.steer * 0.9; // TODO framerate dependennt
-car.steer = steerTarget + (car.steer - steerTarget) * Math.pow(0.99, state.deltaTime);
+    if (state.keyboard.isDown(Controls.LEFT)) {
+        steerTarget = 1;
+    }
+    car.steer = steerTarget + (car.steer - steerTarget) * Math.pow(0.99, state.deltaTime);
+
+    // Some sort of fudge factor, but apart from slippage or whatever it seems like a linear relationship
+    car.yaw += car.steer * 2 * movement / Math.PI / 2;
 
     const fr = gltf.getNodeByName("fr");
     if (fr) {
