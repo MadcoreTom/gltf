@@ -6,7 +6,7 @@ export function updateCar(state: State) {
     const { car, gltf } = state;
 
     const movement = state.keyboard.isDown(Controls.ACCEL) ? state.deltaTime / 100 : 0;
-    const diameter = 0.2; // i made this up. please measure it
+    const diameter = 1.6; // i made this up. please measure it
 
     car.wheelAngle += (movement / (Math.PI * diameter)) * Math.PI * 2;// factorize if it works
     const w = car.wheelAngle;
