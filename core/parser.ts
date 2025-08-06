@@ -1,9 +1,9 @@
 import { Gltf } from "./schema";
 import { GltfWrapper } from "./wrapper";
 
-export async function load(gl: WebGL2RenderingContext, baseUrl: string, path: string, debug: boolean= false): Promise<GltfWrapper> {
+export async function load(gl: WebGL2RenderingContext, baseUrl: string, path: string, debug: boolean = false): Promise<GltfWrapper> {
     // Load gltf
-    const url = new URL(path, baseUrl);
+    const url = join(baseUrl, path);
     debug && console.log("Loading", url);
 
     const response = await fetch(url);
@@ -15,7 +15,7 @@ export async function load(gl: WebGL2RenderingContext, baseUrl: string, path: st
 
     // load binary files
     const promises = gltf.buffers.map(async (buffer, index) => {
-        const url = new URL(buffer.uri, baseUrl);
+        const url = join(baseUrl, buffer.uri);
         const response = await fetch(url);
         const data = await response.arrayBuffer();
 
@@ -26,4 +26,8 @@ export async function load(gl: WebGL2RenderingContext, baseUrl: string, path: st
 
     // done
     return wrapper;
+}
+
+function join(...parts: string[]): string {
+    return parts.map(p => p.endsWith("/") ? p = p.substring(0, p.length - 1) : p).join("/");
 }

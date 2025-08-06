@@ -15,4 +15,10 @@ export class Keyboard<ENUM extends number> {
     public isDown(control: ENUM) {
         return !!this.keys[control];
     }
+
+    public isTyped(control: ENUM) {
+        const v = !!this.keys[control];
+        this.keys[control] = false;
+        return v;
+    }
 }

@@ -15,7 +15,11 @@ export type State = {
     },
     gltf: GltfWrapper,
     track: GltfWrapper,
-    camera: vec3
+    camera: {
+        eye:vec3,
+        target:vec3
+    }
+    cameraMode: number
 }
 
 export function initState(keyboard: Keyboard<Controls>, gltf: GltfWrapper,track:GltfWrapper): State {
@@ -30,7 +34,8 @@ export function initState(keyboard: Keyboard<Controls>, gltf: GltfWrapper,track:
             yaw: Math.PI
         },
         gltf,
-        camera: [-6, 5, 0],
-        track
+        camera: {eye:[-6, 5, 0], target:[0,0,0]},
+        track,
+        cameraMode: 0
     }
 }
