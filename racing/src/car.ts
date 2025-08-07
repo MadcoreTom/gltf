@@ -2,10 +2,26 @@ import { quat2 } from "gl-matrix";
 import { Controls } from "./const";
 import { State } from "./state";
 
+const SPEED = 1 / 50; // max speed
+const MAX_STEER = 0.75; // limit of left/right steering (radians)
+const STEER_RATE = 0.995; // rate that wheels reach the target steering direction
+
 export function updateCar(state: State) {
     const { car, gltf } = state;
 
-    const movement = state.keyboard.isDown(Controls.ACCEL) ? state.deltaTime / 100 : (state.keyboard.isDown(Controls.DECEL) ? state.deltaTime / -50 : 0);
+    let target = 0;
+    let rate = 0.999;
+    if (state.keyboard.isDown(Controls.ACCEL)) {
+        target = 1;
+    } else if (state.keyboard.isDown(Controls.DECEL)) {
+        target = -0.5;
+    } else {
+        rate = 0.98;
+    }
+    target = Math.pow(Math.cos(car.steer), 2) * target; // slows down the taget vel more if you're steering sharply
+    car.vel = target + (car.vel - target) * Math.pow(rate, state.deltaTime);
+
+    const movement = car.vel * SPEED * state.deltaTime;
     const diameter = 1.6; // i made this up. please measure it
 
     car.wheelAngle += (movement / (Math.PI * diameter)) * Math.PI * 2;// factorize if it works
@@ -16,12 +32,12 @@ export function updateCar(state: State) {
 
     let steerTarget = 0;
     if (state.keyboard.isDown(Controls.RIGHT)) {
-        steerTarget = -1;
+        steerTarget = -MAX_STEER;
     }
     if (state.keyboard.isDown(Controls.LEFT)) {
-        steerTarget = 1;
+        steerTarget = MAX_STEER;
     }
-    car.steer = steerTarget + (car.steer - steerTarget) * Math.pow(0.99, state.deltaTime);
+    car.steer = steerTarget + (car.steer - steerTarget) * Math.pow(STEER_RATE, state.deltaTime);
 
     // Some sort of fudge factor, but apart from slippage or whatever it seems like a linear relationship
     car.yaw += car.steer * 2 * movement / Math.PI / 2;

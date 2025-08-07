@@ -11,7 +11,8 @@ export type State = {
         wheelAngle: number,
         steer: number,
         pos: vec3,
-        yaw: number
+        yaw: number,
+        vel:number
     },
     gltf: GltfWrapper,
     track: GltfWrapper,
@@ -31,11 +32,12 @@ export function initState(keyboard: Keyboard<Controls>, gltf: GltfWrapper,track:
             wheelAngle: 0,
             steer: 0,
             pos: [0, 0, 0],
-            yaw: Math.PI
+            yaw: Math.PI,
+            vel :0
         },
         gltf,
         camera: {eye:[-6, 5, 0], target:[0,0,0]},
         track,
-        cameraMode: 0
+        cameraMode: 3
     }
 }

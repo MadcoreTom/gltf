@@ -123,7 +123,7 @@ export class MainComponent extends HTMLElement {
         const lookAt = state.camera.target;
         {
             if(state.keyboard.isTyped(Controls.CAMERA_MODE)){
-                state.cameraMode = (state.cameraMode+1)%4
+                state.cameraMode = (state.cameraMode+1)%5;
             }
             switch(state.cameraMode){
                 case 0:
@@ -144,14 +144,15 @@ export class MainComponent extends HTMLElement {
                     const dz = state.car.pos[2] - state.camera.eye[2];
                     const len = Math.sqrt(dx*dx+dz*dz);
                     if(len > 4){
-                        console.log("Drag")
                         state.camera.eye[0] += dx / len * (len-4);
                         state.camera.eye[2] += dz / len * (len-4);
-                    } else {
-                        console.log(len);
-                    }
+                    } 
                     state.camera.eye[1] = 6;
-                    vec3.set(lookAt,this.state.car.pos[0],0,this.state.car.pos[2]);
+                    vec3.set(lookAt,state.car.pos[0] - Math.cos(state.car.yaw)*4, 0, state.car.pos[2] + Math.sin(state.car.yaw)*4);
+                    break;
+                case 4:
+                    state.camera.eye = [0, 10, 0.1];
+                    vec3.set(lookAt,0,0,0);
                     break;
             }
         }
