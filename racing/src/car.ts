@@ -2,7 +2,7 @@ import { quat2 } from "gl-matrix";
 import { Controls } from "./const";
 import { State } from "./state";
 
-const SPEED = 1 / 50; // max speed
+const SPEED = 1 / 30; // max speed
 const MAX_STEER = 0.75; // limit of left/right steering (radians)
 const STEER_RATE = 0.995; // rate that wheels reach the target steering direction
 
@@ -16,9 +16,9 @@ export function updateCar(state: State) {
     } else if (state.keyboard.isDown(Controls.DECEL)) {
         target = -0.5;
     } else {
-        rate = 0.98;
+        rate = 0.9995;
     }
-    target = Math.pow(Math.cos(car.steer), 2) * target; // slows down the taget vel more if you're steering sharply
+    target = Math.pow(Math.cos(car.steer * 5), 2) * target; // slows down the taget vel more if you're steering sharply
     car.vel = target + (car.vel - target) * Math.pow(rate, state.deltaTime);
 
     const movement = car.vel * SPEED * state.deltaTime;
@@ -29,13 +29,16 @@ export function updateCar(state: State) {
 
     car.pos[0] -= Math.cos(-car.yaw) * movement;
     car.pos[2] -= Math.sin(-car.yaw) * movement;
+    
+    // maximum steering is reduced by the speed
+    const maxSteer = MAX_STEER / (1+car.vel*3)
 
     let steerTarget = 0;
     if (state.keyboard.isDown(Controls.RIGHT)) {
-        steerTarget = -MAX_STEER;
+        steerTarget = -maxSteer;
     }
     if (state.keyboard.isDown(Controls.LEFT)) {
-        steerTarget = MAX_STEER;
+        steerTarget = maxSteer;
     }
     car.steer = steerTarget + (car.steer - steerTarget) * Math.pow(STEER_RATE, state.deltaTime);
 

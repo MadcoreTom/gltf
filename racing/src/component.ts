@@ -13,6 +13,7 @@ export class MainComponent extends HTMLElement {
     private gl: WebGL2RenderingContext;
     private gltf: GltfWrapper;
     private track: GltfWrapper;
+    private hud: GltfWrapper;
     private vw: number;
     private vh: number;
     private state: State;
@@ -73,7 +74,7 @@ export class MainComponent extends HTMLElement {
         );
 
         // track
-   this.track = await load(this.gl, "assets/", "debug.gltf");
+        this.track = await load(this.gl, "assets/", "debug.gltf");
         // shaders
         this.track.addShader(
             shader,
@@ -85,6 +86,35 @@ export class MainComponent extends HTMLElement {
         );
         this.track.addShader(
             shader,
+            {
+                materialToUniform: {
+                    "pbrMetallicRoughness.baseColorFactor": "col"
+                }
+            }
+        );
+
+        // hud
+            const shaderFullbright = await new ShaderBuilder(this.gl)
+            .vert("assets/shaders/vert.glsl")
+            .frag("assets/shaders/frag-col-fullbright.glsl")
+            .worldMat("uModelMat")
+            .cameraMat("uProjMat")
+            .attribute("aPos", "POSITION")
+            .attribute("aNorm", "NORMAL")
+            .attribute("aTex", "TEXCOORD_0")
+            .build();
+        this.hud = await load(this.gl, "assets/", "hud.gltf");
+        // shaders
+        this.hud.addShader(
+            shaderFullbright,
+            {
+                materialToUniform: {
+                    "emissiveFactor": "col"
+                }
+            }
+        );
+        this.hud.addShader(
+            shaderFullbright,
             {
                 materialToUniform: {
                     "pbrMetallicRoughness.baseColorFactor": "col"
@@ -114,45 +144,45 @@ export class MainComponent extends HTMLElement {
         const { gl, gltf, state } = this;
         gl.clearColor(0.047, 0.800, 0.996, 1);
         gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
-        gl.disable(gl.CULL_FACE);
-        gl.frontFace(gl.CW);
+        gl.enable(gl.CULL_FACE);
+        gl.frontFace(gl.CCW);
         gl.cullFace(gl.BACK);
         gl.enable(gl.DEPTH_TEST);
 
         // Camera
         const lookAt = state.camera.target;
         {
-            if(state.keyboard.isTyped(Controls.CAMERA_MODE)){
-                state.cameraMode = (state.cameraMode+1)%5;
+            if (state.keyboard.isTyped(Controls.CAMERA_MODE)) {
+                state.cameraMode = (state.cameraMode + 1) % 5;
             }
-            switch(state.cameraMode){
+            switch (state.cameraMode) {
                 case 0:
                     state.camera.eye = [-6, 5, 0];
-                    vec3.set(lookAt,this.state.car.pos[0],3,this.state.car.pos[2]);
+                    vec3.set(lookAt, this.state.car.pos[0], 3, this.state.car.pos[2]);
                     break;
                 case 1:
-                    state.camera.eye = [state.car.pos[0] + Math.cos(state.car.yaw)*5, 5, state.car.pos[2] - Math.sin(state.car.yaw)*5];
-                    vec3.set(lookAt,this.state.car.pos[0],3,this.state.car.pos[2]);
+                    state.camera.eye = [state.car.pos[0] + Math.cos(state.car.yaw) * 5, 5, state.car.pos[2] - Math.sin(state.car.yaw) * 5];
+                    vec3.set(lookAt, this.state.car.pos[0], 3, this.state.car.pos[2]);
                     break;
                 case 2:
                     state.camera.eye = [state.car.pos[0] + Math.cos(state.car.yaw), 10, state.car.pos[2] - Math.sin(state.car.yaw)];
-                    vec3.set(lookAt,this.state.car.pos[0],0,this.state.car.pos[2]);
+                    vec3.set(lookAt, this.state.car.pos[0], 0, this.state.car.pos[2]);
                     break;
                 case 3:
                     // state.camera.eye = [state.car.pos[0] + Math.cos(state.car.yaw), 10, state.car.pos[2] - Math.sin(state.car.yaw)];
                     const dx = state.car.pos[0] - state.camera.eye[0];
                     const dz = state.car.pos[2] - state.camera.eye[2];
-                    const len = Math.sqrt(dx*dx+dz*dz);
-                    if(len > 4){
-                        state.camera.eye[0] += dx / len * (len-4);
-                        state.camera.eye[2] += dz / len * (len-4);
-                    } 
+                    const len = Math.sqrt(dx * dx + dz * dz);
+                    if (len > 4) {
+                        state.camera.eye[0] += dx / len * (len - 4);
+                        state.camera.eye[2] += dz / len * (len - 4);
+                    }
                     state.camera.eye[1] = 6;
-                    vec3.set(lookAt,state.car.pos[0] - Math.cos(state.car.yaw)*4, 0, state.car.pos[2] + Math.sin(state.car.yaw)*4);
+                    vec3.set(lookAt, state.car.pos[0] - Math.cos(state.car.yaw) * 4, 0, state.car.pos[2] + Math.sin(state.car.yaw) * 4);
                     break;
                 case 4:
                     state.camera.eye = [0, 10, 0.1];
-                    vec3.set(lookAt,0,0,0);
+                    vec3.set(lookAt, 0, 0, 0);
                     break;
             }
         }
@@ -162,8 +192,8 @@ export class MainComponent extends HTMLElement {
         mat4.rotateY(world, world, this.state.car.yaw);
         // mat4.rotate(world, world, Math.PI, [0, 0, 1]);
         const camera = mat4.create();
-        mat4.perspective(camera, 80, this.vw / this.vh, 0.1, 100);
-        mat4.multiply(camera, camera, mat4.lookAt(mat4.create(), this.state.camera.eye, lookAt, [0,-1,0]));
+        mat4.perspective(camera, 80, this.vw / this.vh, 0.1, 1000);
+        mat4.multiply(camera, camera, mat4.lookAt(mat4.create(), this.state.camera.eye, lookAt, [0, -1, 0]));
         // const camera = mat4.translate(mat4.create(), mat4.perspective(mat4.create(), 80, this.vw / this.vh, 0.1, 100), [0, 0, -3]);
 
         // updates
@@ -174,7 +204,19 @@ export class MainComponent extends HTMLElement {
         // gltf.drawMeshById(0, world, camera);
         gltf.drawScene(0, camera, world);
         this.track.drawScene(0, camera, mat4.create());
-        window.requestAnimationFrame(t => this.onFrame(t));
+
+
+        // hud
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+        gl.disable(gl.CULL_FACE)
+        // gl.disable(gl.DEPTH_TEST)
+        const h = this.hud.getNodeByName('Needle');
+        if (h) {
+            h.rotation = quat2.rotateY(quat2.create(), quat2.create(), -Math.abs(state.car.vel * 4));
+        }
+        this.hud.drawScene(0, mat4.fromScaling(mat4.create(), [11 / 16, 18 / 16, -0.5]), mat4.fromXRotation(mat4.create(), Math.PI * 0.5));
+
+        window.requestAnimationFrame(t => this.onFrame(t)); 1
 
     }
 
