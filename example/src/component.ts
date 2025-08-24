@@ -1,14 +1,15 @@
-import { mat3, mat4, quat, quat2, vec3 } from "gl-matrix";
+import { mat3, mat4, quat, quat2, vec3, vec4 } from "gl-matrix";
 import { load } from "../../core/parser";
 import { Shader, ShaderBuilder } from "../../core/shader";
-import { GltfWrapper } from "../../core/wrapper";
+import { GltfWrapper, ShaderWrapper } from "../../core/wrapper";
 
 const DEMOS:[string,string][]  = [
     ["/assets/", "test3.gltf"],
     ["/assets/", "monkey.gltf"],
     ["/assets/", "windmill.gltf"],
     ["/assets/notmine/", "scene.gltf"],
-    ["/assets/car/", "untitled.gltf"]
+    ["/assets/car/", "untitled.gltf"],
+    ["/assets/", "textured_cube.gltf"]
 ]
 
 export class MainComponent extends HTMLElement {
@@ -67,26 +68,48 @@ export class MainComponent extends HTMLElement {
             .frag("assets/shaders/frag-col.glsl")
             .worldMat("uModelMat")
             .cameraMat("uProjMat")
-            .attribute("aPos","POSITION")
-            .attribute("aNorm","NORMAL")
-            .attribute("aTex","TEXCOORD_0")
+            .attribute("aPos", "POSITION")
+            .attribute("aNorm", "NORMAL")
+            .attribute("aTex", "TEXCOORD_0")
             .build();
-        this.gltf.addShader(
+
+
+        this.gltf.addShader(new ShaderWrapper(
+            "BaseColor",
             shader,
-            {
-                materialToUniform: {
-                    "emissiveFactor": "col"
-                }
+            (material) => material.pbrMetallicRoughness?.baseColorFactor != undefined,
+            (shader, material) => {
+                shader.setVec4("col", material.pbrMetallicRoughness?.baseColorFactor as vec4)
             }
-        );
-        this.gltf.addShader(
-            shader,
-            {
-                materialToUniform: {
-                    "pbrMetallicRoughness.baseColorFactor": "col"
-                }
+        ));
+        const shaderEmissive = await new ShaderBuilder(this.gl)
+            .vert("assets/shaders/vert.glsl")
+            .frag("assets/shaders/frag-emissive.glsl")
+            .worldMat("uModelMat")
+            .cameraMat("uProjMat")
+            .attribute("aPos", "POSITION")
+            .attribute("aNorm", "NORMAL")
+            .attribute("aTex", "TEXCOORD_0")
+            .build();
+
+        this.gltf.addShader(new ShaderWrapper(
+            "Emissive",
+            shaderEmissive,
+            (material) => material.emissiveFactor != undefined,
+            (shader, material) => {
+                shader.setVec4("col", material.emissiveFactor as vec4)
             }
-        );
+        ));
+
+        // the rset
+        this.gltf.addShader(new ShaderWrapper(
+            "CatchAll",
+            shaderEmissive,
+            (material) => true,
+            (shader, material) => {
+                shader.setVec4("col", [0.5,0.5,0.5,1.0]);
+            }
+        ));
 
         console.log("Ready for the first frame")
         window.requestAnimationFrame(t=>this.onFrame(t));

@@ -1,6 +1,6 @@
 // TODO incomplete
 
-import { quat2, vec3 } from "gl-matrix"
+import { quat2, vec3, vec4 } from "gl-matrix"
 
 export type Gltf = {
     asset: any,
@@ -8,7 +8,7 @@ export type Gltf = {
     scenes: GltfScene[],
     nodes: GltfNode[],
     animations: any[],
-    materials: any[],
+    materials: GltfMaterial[],
     meshes: GltfMesh[],
     skins: any[],
     accessors: GltfAcceesor[],
@@ -16,7 +16,20 @@ export type Gltf = {
     buffers: GltfBuffer[]
 }
 
-export type GltfAcceesor = {
+export type GltfMaterial = {
+    name: string,
+    doubleSided?: boolean,
+    emissiveFactor?: vec3,
+    pbrMetallicRoughness?: {
+        baseColorFactor?: vec3 | vec4,
+        baseColorTexture?: {
+            index: number
+        },
+        roughnessFactor?: number
+    }
+}
+
+export type GltfAcceesor = { // TODO typo in name
     /**  IDX of bufferViews */
     bufferView: number,
     componentType: 5121 | 5123 | 5126,

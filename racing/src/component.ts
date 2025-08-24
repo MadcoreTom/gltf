@@ -1,7 +1,7 @@
-import { mat4, quat2, vec3 } from "gl-matrix";
+import { mat4, quat2, vec3, vec4 } from "gl-matrix";
 import { load } from "../../core/parser";
 import { ShaderBuilder } from "../../core/shader";
-import { GltfWrapper } from "../../core/wrapper";
+import { GltfWrapper, ShaderWrapper } from "../../core/wrapper";
 import { Keyboard } from "./keyboard";
 import { initState, State } from "./state";
 import { Controls } from "./const";
@@ -44,9 +44,7 @@ export class MainComponent extends HTMLElement {
     }
 
     private async load(dir: string, name: string) {
-        this.gltf = await load(this.gl, dir, name);
         // shaders
-        // this.shader = await loadShader(this.gl, "assets/shaders/vert.glsl", "assets/shaders/frag-col.glsl");
         const shader = await new ShaderBuilder(this.gl)
             .vert("assets/shaders/vert.glsl")
             .frag("assets/shaders/frag-col.glsl")
@@ -56,45 +54,7 @@ export class MainComponent extends HTMLElement {
             .attribute("aNorm", "NORMAL")
             .attribute("aTex", "TEXCOORD_0")
             .build();
-        this.gltf.addShader(
-            shader,
-            {
-                materialToUniform: {
-                    "emissiveFactor": "col"
-                }
-            }
-        );
-        this.gltf.addShader(
-            shader,
-            {
-                materialToUniform: {
-                    "pbrMetallicRoughness.baseColorFactor": "col"
-                }
-            }
-        );
-
-        // track
-        this.track = await load(this.gl, "assets/", "debug.gltf");
-        // shaders
-        this.track.addShader(
-            shader,
-            {
-                materialToUniform: {
-                    "emissiveFactor": "col"
-                }
-            }
-        );
-        this.track.addShader(
-            shader,
-            {
-                materialToUniform: {
-                    "pbrMetallicRoughness.baseColorFactor": "col"
-                }
-            }
-        );
-
-        // hud
-            const shaderFullbright = await new ShaderBuilder(this.gl)
+        const shaderFullbright = await new ShaderBuilder(this.gl)
             .vert("assets/shaders/vert.glsl")
             .frag("assets/shaders/frag-col-fullbright.glsl")
             .worldMat("uModelMat")
@@ -103,24 +63,33 @@ export class MainComponent extends HTMLElement {
             .attribute("aNorm", "NORMAL")
             .attribute("aTex", "TEXCOORD_0")
             .build();
-        this.hud = await load(this.gl, "assets/", "hud.gltf");
         // shaders
-        this.hud.addShader(
-            shaderFullbright,
-            {
-                materialToUniform: {
-                    "emissiveFactor": "col"
-                }
+        const colourShaderW = new ShaderWrapper(
+            "BaseColor",
+            shader,
+            (material) => material.pbrMetallicRoughness?.baseColorFactor != undefined,
+            (shader, material) => {
+                shader.setVec4("col", material.pbrMetallicRoughness?.baseColorFactor as vec4)
             }
         );
-        this.hud.addShader(
+        const fullbrightShaderW = new ShaderWrapper(
+            "FullBright",
             shaderFullbright,
-            {
-                materialToUniform: {
-                    "pbrMetallicRoughness.baseColorFactor": "col"
-                }
+            (material) => material.emissiveFactor != undefined,
+            (shader, material) => {
+                shader.setVec4("col", material.emissiveFactor as vec4)
             }
         );
+
+        // car        
+        this.gltf = (await load(this.gl, dir, name))
+        .addShader(fullbrightShaderW).addShader(colourShaderW);
+        // track
+        this.track = (await load(this.gl, "assets/", "debug.gltf"))
+        .addShader(fullbrightShaderW).addShader(colourShaderW);
+        // hud
+        this.hud = (await load(this.gl, "assets/", "hud.gltf"))
+        .addShader(fullbrightShaderW).addShader(colourShaderW);
 
         const keybord = new Keyboard(window, {
             "KeyW": Controls.ACCEL,
