@@ -1,21 +1,24 @@
-import { mat3, mat4, quat, quat2, vec3, vec4 } from "gl-matrix";
+import { mat4, vec3, vec4 } from "gl-matrix";
 import { load } from "../../core/parser";
-import { Shader, ShaderBuilder } from "../../core/shader";
+import { ShaderBuilder } from "../../core/shader";
 import { GltfWrapper, ShaderWrapper } from "../../core/wrapper";
+import { TextureCache } from "../../core/textureCache";
 
-const DEMOS:[string,string][]  = [
+const DEMOS: [string, string][] = [
     ["/assets/", "test3.gltf"],
     ["/assets/", "monkey.gltf"],
     ["/assets/", "windmill.gltf"],
     ["/assets/notmine/", "scene.gltf"],
     ["/assets/car/", "untitled.gltf"],
-    ["/assets/", "textured_cube.gltf"]
+    ["/assets/", "textured_cube.gltf"],
+    ["/assets/", "room.gltf"]
 ]
 
 export class MainComponent extends HTMLElement {
     private canvas: HTMLCanvasElement;
     private gl: WebGL2RenderingContext;
     private gltf: GltfWrapper;
+    private textureCache: TextureCache;
 
     constructor() {
         super();
@@ -38,8 +41,8 @@ export class MainComponent extends HTMLElement {
 
         // list demos
         const list = document.createElement("ul");
-        list.style.color = "white";        
-        DEMOS.forEach(d=>{
+        list.style.color = "white";
+        DEMOS.forEach(d => {
             const item = document.createElement("li");
             list.appendChild(item);
 
@@ -53,14 +56,15 @@ export class MainComponent extends HTMLElement {
 
         // Load content
         const selected = new URLSearchParams(window.location.search).get("name");
-        const demo = DEMOS.filter(d=>d[1] === selected);
+        const demo = DEMOS.filter(d => d[1] === selected);
         demo.push(DEMOS[0]); // default
         this.gl = this.canvas.getContext("webgl2") as WebGL2RenderingContext;
+        this.textureCache = new TextureCache(this.gl); 
         this.load(...demo[0]);
     }
 
-    private async load(dir:string, name:string) {
-        this.gltf = await load(this.gl, window.location.origin + dir, name);
+    private async load(dir: string, name: string) {
+        this.gltf = await load(this.gl, window.location.origin + dir, name, this.textureCache);
         // shaders
         // this.shader = await loadShader(this.gl, "assets/shaders/vert.glsl", "assets/shaders/frag-col.glsl");
         const shader = await new ShaderBuilder(this.gl)
@@ -70,7 +74,7 @@ export class MainComponent extends HTMLElement {
             .cameraMat("uProjMat")
             .attribute("aPos", "POSITION")
             .attribute("aNorm", "NORMAL")
-            .attribute("aTex", "TEXCOORD_0")
+            // .attribute("aTex", "TEXCOORD_0")
             .build();
 
 
@@ -89,7 +93,7 @@ export class MainComponent extends HTMLElement {
             .cameraMat("uProjMat")
             .attribute("aPos", "POSITION")
             .attribute("aNorm", "NORMAL")
-            .attribute("aTex", "TEXCOORD_0")
+            // .attribute("aTex", "TEXCOORD_0")
             .build();
 
         this.gltf.addShader(new ShaderWrapper(
@@ -100,6 +104,32 @@ export class MainComponent extends HTMLElement {
                 shader.setVec4("col", material.emissiveFactor as vec4)
             }
         ));
+        const shaderTex = await new ShaderBuilder(this.gl)
+            .vert("assets/shaders/vert.glsl")
+            .frag("assets/shaders/frag-tex.glsl")
+            .worldMat("uModelMat")
+            .cameraMat("uProjMat")
+            .attribute("aPos", "POSITION")
+            .attribute("aNorm", "NORMAL")
+            .attribute("aTex", "TEXCOORD_0")
+            .build();
+
+        this.gltf.addShader(new ShaderWrapper(
+            "Textured",
+            shaderTex,
+            (material) => material.pbrMetallicRoughness?.baseColorTexture?.index != undefined,
+            (shader, material, gltf, textures) => {
+                // shader.setVec4("col", material.emissiveFactor as vec4)
+                const idx = material.pbrMetallicRoughness?.baseColorTexture?.index;
+                if(idx != undefined){
+                    const tex = gltf.textures ? gltf.textures[idx] : undefined;
+                    if(tex){
+                        const img = textures[tex.source];
+                        this.gl.bindTexture(this.gl.TEXTURE_2D, img);
+                    }
+                }
+            }
+        ));
 
         // the rset
         this.gltf.addShader(new ShaderWrapper(
@@ -107,17 +137,17 @@ export class MainComponent extends HTMLElement {
             shaderEmissive,
             (material) => true,
             (shader, material) => {
-                shader.setVec4("col", [0.5,0.5,0.5,1.0]);
+                shader.setVec4("col", [0.5, 0.5, 0.5, 1.0]);
             }
         ));
 
         console.log("Ready for the first frame")
-        window.requestAnimationFrame(t=>this.onFrame(t));
+        window.requestAnimationFrame(t => this.onFrame(t));
     }
 
     private onFrame(time: number) {
         const { gl, gltf } = this;
-        gl.clearColor(56/225*0.7,59/225*0.7, 72/225*0.7, 1);
+        gl.clearColor(56 / 225 * 0.7, 59 / 225 * 0.7, 72 / 225 * 0.7, 1);
         gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
         gl.disable(gl.CULL_FACE);
         gl.frontFace(gl.CW);
@@ -125,12 +155,12 @@ export class MainComponent extends HTMLElement {
         gl.enable(gl.DEPTH_TEST);
 
         const world = mat4.fromRotation(mat4.create(), time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
-        mat4.rotate(world, world,Math.PI, [0,0,1]);
+        mat4.rotate(world, world, Math.PI, [0, 0, 1]);
         const camera = mat4.translate(mat4.create(), mat4.perspective(mat4.create(), 80, 1, 0.1, 100), [0, 0, -2]);
 
         // gltf.drawMeshById(0, world, camera);
         gltf.drawScene(0, camera, world);
-        window.requestAnimationFrame(t=>this.onFrame(t));
+        window.requestAnimationFrame(t => this.onFrame(t));
     }
 
     private onClick(x: number, y: number, left: boolean) {

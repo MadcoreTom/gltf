@@ -1,7 +1,8 @@
 import { Gltf } from "./schema";
+import { TextureCache } from "./textureCache";
 import { GltfWrapper } from "./wrapper";
 
-export async function load(gl: WebGL2RenderingContext, baseUrl: string, path: string, debug: boolean = false): Promise<GltfWrapper> {
+export async function load(gl: WebGL2RenderingContext, baseUrl: string, path: string, textureCache?: TextureCache, debug: boolean = false): Promise<GltfWrapper> {
     // Load gltf
     const url = join(baseUrl, path);
     debug && console.log("Loading", url);
@@ -11,7 +12,7 @@ export async function load(gl: WebGL2RenderingContext, baseUrl: string, path: st
     debug && console.log("Loaded GLTF", gltf);
 
     // Create the wrapper
-    const wrapper = new GltfWrapper(gl, gltf);
+    const wrapper = new GltfWrapper(gl, gltf, baseUrl, textureCache);
 
     // load binary files
     const promises = gltf.buffers.map(async (buffer, index) => {

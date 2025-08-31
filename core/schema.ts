@@ -13,7 +13,20 @@ export type Gltf = {
     skins: any[],
     accessors: GltfAcceesor[],
     bufferViews: GltfBufferView[],
-    buffers: GltfBuffer[]
+    buffers: GltfBuffer[],
+    images: GltfImage[],
+    textures: GltfTexture[]
+}
+
+export type GltfTexture = {
+    sampler: number,
+    source: number
+}
+
+export type GltfImage = {
+    mimeType: string,
+    name: string,
+    uri: string
 }
 
 export type GltfMaterial = {

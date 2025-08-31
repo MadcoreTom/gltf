@@ -2,10 +2,7 @@ import { mat4, ReadonlyMat4 } from "gl-matrix";
 import { Gltf, GltfAcceesor, GltfBufferView, GltfMaterial, GltfMeshPrimitive, GltfNode } from "./schema";
 import { Shader } from "./shader";
 import { getGlTypeForComponentType } from "./util";
-
-// type MaterialAttr = {
-//     materialToUniform: { [prop: string]: string };
-// }
+import { TextureCache } from "./textureCache";
 
 export class GltfWrapper {
     private nodeNames: Map<string, number> = new Map();
@@ -14,13 +11,20 @@ export class GltfWrapper {
     private bufferViews: WebGLBuffer[] = []
     private nodeMats: mat4[] = [];
     private innerMaterials: ShaderWrapper[] = [];
-    public constructor(private readonly gl: WebGL2RenderingContext, private readonly gltf: Gltf) {
+    private innerTextures: WebGLTexture[] = [];
+    public constructor(private readonly gl: WebGL2RenderingContext, private readonly gltf: Gltf, private readonly baseUrl:string, private readonly textureCache?: TextureCache) {
         gltf.nodes.forEach((n, i) => {
             this.nodeNames.set(n.name as string, i);
         });
         gltf.meshes.forEach((m, i) => {
             m.name != null && this.meshNames.set(m.name, i);
         });
+        if (textureCache && gltf.images) {
+            gltf.images.forEach((img, i) => {
+                console.log("IMAGE", img);
+                this.innerTextures[i] = textureCache.loadOrGet(baseUrl + "/" + img.uri);
+            });
+        }
         console.log(this);
     }
 
@@ -54,68 +58,25 @@ export class GltfWrapper {
         this.innerMaterials[materialIdx] = match;
     }
 
-    // private applyShader(primitive: GltfMeshPrimitive): Shader | undefined {
-    //     // TODO probably cache materials, there's a bit of fiddling here we don't want to do per frame
-    //     const mat = this.gltf.materials[primitive.material];
-    //     this.assert(!!mat, "Material not found", primitive.material);
-    //     const attributes = Object.keys(primitive.attributes);
-    //     // console.log("ATTRS", attributes);
-
-    //     // Find first shader that match the requirements
-    //     // TODO maybe find best, or sort them first?
-    //     const results = this.shaders.map(([attr, sh]) => {
-    //         // matches if there are 0 not-found attr in attributes
-    //         let matches = sh.getSupportedAttributes().filter(a => attributes.indexOf(a) < 0).length == 0;
-    //         // matches if this property exists in the material     
-    //         let uniforms: { [key: string]: any } = {};
-    //         matches &&= Object.entries(attr.materialToUniform).filter(([path, uniform]) => {
-    //             const parts = path.split(".");
-    //             let cur = mat;
-    //             while (parts.length > 0) {
-    //                 const p = parts.shift() as string;
-    //                 cur = cur[p];
-    //                 // console.log(p,!!cur)
-    //             }
-                
-    //             uniforms[uniform] = cur ? cur :  [0.5,0.5,0.5,1.0];
-    //             return cur == undefined;
-    //         }).length == 0; // no trues = nothing wasnt found (double negative)
-    //         return {matches,uniforms,shader:sh};
-    //     }).filter(s=>s.matches);
-    //     const {shader,uniforms} = results[0];
-
-    //     // TODO maybe it should get all the maps
-    //     // needs to set the uniforms
-
-    //     if (shader) {
-    //         shader.useProgram();
-    //         // apply uniforms
-    //         Object.entries(uniforms).forEach(([k, v]) => shader.setVec4(k, v)); // TODO support more than vec4
-    //         return shader;
-    //     }
-
-    //     return undefined;
-    // }
-
     // function to render nodes by name or id
     // function to render mesh by name or id
 
-    public drawMeshById(meshId: number, world:ReadonlyMat4, camera:ReadonlyMat4) {
+    public drawMeshById(meshId: number, world: ReadonlyMat4, camera: ReadonlyMat4) {
         const mesh = this.gltf.meshes[meshId];
         this.assert(!!mesh, "Mesh not found", meshId);
         mesh.primitives.forEach(primitive => this.drawPrimitive(primitive, world, camera));
     }
 
-    private drawPrimitive(primitive: GltfMeshPrimitive, world:ReadonlyMat4, camera:ReadonlyMat4) {
+    private drawPrimitive(primitive: GltfMeshPrimitive, world: ReadonlyMat4, camera: ReadonlyMat4) {
         let material = this.innerMaterials[primitive.material];
-        if(material == undefined){
+        if (material == undefined) {
             this.calcInnerMaterialFromShader(primitive.material);
             material = this.innerMaterials[primitive.material];
-            if(material == undefined){
+            if (material == undefined) {
                 console.error("Failed to select materia for primitive", JSON.stringify(primitive, null, 2));
             }
         }
-        material.use(this.gltf.materials[primitive.material]);
+        material.use(this.gltf.materials[primitive.material], this.gltf, this.innerTextures);
         // const shader = this.applyShader(primitive);
         const shader = material.shader;
         // it depends on the shader, which depends on available attributes plus material
@@ -175,9 +136,9 @@ export class GltfWrapper {
         );
     }
 
-    public getNodeByName(name:string): GltfNode |undefined{
+    public getNodeByName(name: string): GltfNode | undefined {
         const idx = this.nodeNames.get(name);
-        if(idx !== undefined){
+        if (idx !== undefined) {
             delete this.nodeMats[idx];
             return this.gltf.nodes[idx];
         }
@@ -216,85 +177,20 @@ export class GltfWrapper {
         }
     }
 
-    
-    // private walkNode<S>(nodeIdx: number, state: S, callback: GltfNodeCallback<S>, depth:number[]) {
-    //     if(depth.length > 20){
-    //         console.warn("Depth exceeded with node", depth);
-    //         return;
-    //     }
-    //     const childState = callback(nodeIdx, state, this);
-    //     const node = this.gltf.nodes[nodeIdx];
-    //     if (node.children) {
-    //         node.children.forEach(child => this.walkNode(child, childState, callback, [...depth, nodeIdx]));
-    //     }
-    // }
 }
 
-
-// export type GltfNodeCallback<S> = (nodeIdx: number, state: S, gltfw: GltfWrapper) => S;
-
-
-
-    // export class ShaderWrapper {
-    //     public constructor(private readonly shader:Shader, private readonly attributesMapping:{paths:string[][],output:string}[]){
-
-    //     }
-
-    //     public matches(material:GltfMaterial):ShaderMaterial | null {
-    //         const gsp:GetterSetterPair<any>[] = [];
-
-    //         const matched = this.attributesMapping.filter(mapping=>{
-    //             const matchingPath =  mapping.paths.filter(p=>this.getProperty(material,p) != undefined)[0];
-    //         return matched == this.attributesMapping.length; 
-    //         });
-    //     }
-
-    //     // public use(material:GltfMaterial){
-    //     //     this.shader.useProgram();
-    //     // }
-
-    //     private getProperty(object:any, key:string[], depth:number=0):any {
-    //         if(key[depth] in object){
-    //             if(depth == key.length-1){
-    //                 return object[key[depth]];
-    //             } else {
-    //                 return this.getProperty(object[key[depth]], key, depth+1)
-    //             }
-    //         }
-    //         return undefined;
-    //     }
-    // }
-
-    // type GetterSetterPair<T> = {
-    //     getter: (material:GltfMaterial)=>T,
-    //     setter: (shader:Shader, t:T)=>any
-    // } 
-
-    // export class ShaderMaterial {
-    //     public constructor (private readonly shader:Shader, private readonly getterSetterPairs: GetterSetterPair<any>[]){
-
-    //     }
-        
-    //     public use(material:GltfMaterial){
-    //         this.shader.useProgram();
-    //         this.getterSetterPairs.forEach(({getter,setter})=>{
-    //             setter(this.shader, getter(material));
-    //         });
-    //     }
-    // }
-
 export class ShaderWrapper {
-    public readonly use: (material: GltfMaterial) => void;
+    public readonly use: (material: GltfMaterial,gltf:Gltf, textures: WebGLTexture[]) => void;
 
     public constructor(
         public readonly name,
         public readonly shader: Shader,
         public readonly test: (material: GltfMaterial) => boolean,
-        useInternal: (shader: Shader, material: GltfMaterial) => void
+        useInternal: (shader: Shader, material: GltfMaterial,gltf:Gltf, textures: WebGLTexture[]) => void
     ) {
-        this.use = (material: GltfMaterial) => {
+        this.use = (material: GltfMaterial,gltf:Gltf, textures: WebGLTexture[]) => {
             shader.useProgram();
-            useInternal(shader, material);
+            useInternal(shader, material, gltf, textures);
         }
     }
 }
