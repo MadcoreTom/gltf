@@ -67,6 +67,25 @@ export class MainComponent extends HTMLElement {
         this.gltf = await load(this.gl, window.location.origin + dir, name, this.textureCache);
         // shaders
         // this.shader = await loadShader(this.gl, "assets/shaders/vert.glsl", "assets/shaders/frag-col.glsl");
+        
+        const shaderEmissive = await new ShaderBuilder(this.gl)
+            .vert("assets/shaders/vert.glsl")
+            .frag("assets/shaders/frag-emissive.glsl")
+            .worldMat("uModelMat")
+            .cameraMat("uProjMat")
+            .attribute("aPos", "POSITION")
+            .attribute("aNorm", "NORMAL")
+            // .attribute("aTex", "TEXCOORD_0")
+            .build();
+
+        this.gltf.addShader(new ShaderWrapper(
+            "Emissive",
+            shaderEmissive,
+            (material) => material.emissiveFactor != undefined,
+            (shader, material) => {
+                shader.setVec4("col", material.emissiveFactor as vec4)
+            }
+        ));
         const shader = await new ShaderBuilder(this.gl)
             .vert("assets/shaders/vert.glsl")
             .frag("assets/shaders/frag-col.glsl")
@@ -84,24 +103,6 @@ export class MainComponent extends HTMLElement {
             (material) => material.pbrMetallicRoughness?.baseColorFactor != undefined,
             (shader, material) => {
                 shader.setVec4("col", material.pbrMetallicRoughness?.baseColorFactor as vec4)
-            }
-        ));
-        const shaderEmissive = await new ShaderBuilder(this.gl)
-            .vert("assets/shaders/vert.glsl")
-            .frag("assets/shaders/frag-emissive.glsl")
-            .worldMat("uModelMat")
-            .cameraMat("uProjMat")
-            .attribute("aPos", "POSITION")
-            .attribute("aNorm", "NORMAL")
-            // .attribute("aTex", "TEXCOORD_0")
-            .build();
-
-        this.gltf.addShader(new ShaderWrapper(
-            "Emissive",
-            shaderEmissive,
-            (material) => material.emissiveFactor != undefined,
-            (shader, material) => {
-                shader.setVec4("col", material.emissiveFactor as vec4)
             }
         ));
         const shaderTex = await new ShaderBuilder(this.gl)
