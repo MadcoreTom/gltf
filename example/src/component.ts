@@ -47,7 +47,7 @@ export class MainComponent extends HTMLElement {
             list.appendChild(item);
 
             const link = document.createElement("a");
-            link.href = "/?name=" + d[1];
+            link.href = "?name=" + d[1];
             link.textContent = d[1];
             link.style.color = "yellow";
             item.appendChild(link);
@@ -55,7 +55,7 @@ export class MainComponent extends HTMLElement {
         shadowRoot.appendChild(list);
 
         // Load content
-        const selected = new URLSearchParams(window.location.search).get("name");
+        const selected = new URLSearchParams(window.location.search).get("name") || DEMOS[0][1];
         const demo = DEMOS.filter(d => d[1] === selected);
         demo.push(DEMOS[0]); // default
         this.gl = this.canvas.getContext("webgl2") as WebGL2RenderingContext;
