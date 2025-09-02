@@ -64,7 +64,7 @@ export class MainComponent extends HTMLElement {
     }
 
     private async load(dir: string, name: string) {
-        this.gltf = await load(this.gl, window.location.origin + dir, name, this.textureCache);
+        this.gltf = await load(this.gl, window.location.origin + window.location.pathname+ dir, name, this.textureCache);
         // shaders
         // this.shader = await loadShader(this.gl, "assets/shaders/vert.glsl", "assets/shaders/frag-col.glsl");
         
