@@ -12,7 +12,7 @@ export class GltfWrapper {
     private nodeMats: mat4[] = [];
     private innerMaterials: ShaderWrapper[] = [];
     private innerTextures: WebGLTexture[] = [];
-    public constructor(private readonly gl: WebGL2RenderingContext, private readonly gltf: Gltf, private readonly baseUrl:string, private readonly textureCache?: TextureCache) {
+    public constructor(private readonly gl: WebGL2RenderingContext, public readonly gltf: Gltf, private readonly baseUrl:string, private readonly textureCache?: TextureCache) {
         gltf.nodes.forEach((n, i) => {
             this.nodeNames.set(n.name as string, i);
         });

@@ -3,6 +3,7 @@ import { load } from "../../core/parser";
 import { ShaderBuilder } from "../../core/shader";
 import { GltfWrapper, ShaderWrapper } from "../../core/wrapper";
 import { TextureCache } from "../../core/textureCache";
+import { Gltf } from "../../core/schema";
 
 const DEMOS: [string, string][] = [
     ["/assets/", "test3.gltf"],
@@ -19,6 +20,7 @@ export class MainComponent extends HTMLElement {
     private gl: WebGL2RenderingContext;
     private gltf: GltfWrapper;
     private textureCache: TextureCache;
+    private shadowRoot: ShadowRoot;
 
     constructor() {
         super();
@@ -29,6 +31,7 @@ export class MainComponent extends HTMLElement {
         const vh = parseInt(this.getAttribute("height") || "400");
 
         const shadowRoot = this.attachShadow({ mode: "open" });
+        this.shadowRoot = shadowRoot;
 
         this.canvas = document.createElement("canvas");
         this.canvas.width = vw;
@@ -142,8 +145,31 @@ export class MainComponent extends HTMLElement {
             }
         ));
 
+        const nodeTree = document.createElement("ul");
+        nodeTree.style.color = "white";
+        this.shadowRoot.appendChild(nodeTree);
+
+        this.gltf.gltf.scenes[0].nodes.forEach(n=>this.printNode(this.gltf.gltf, n, 0, nodeTree))
+
         console.log("Ready for the first frame")
         window.requestAnimationFrame(t => this.onFrame(t));
+    }
+
+    private printNode(gltf:Gltf, nodeIdx:number,depth:number, elem: HTMLElement){
+        const n = gltf.nodes[nodeIdx];
+        let str = "▶️";
+        for(let i=0;i<depth;i++){
+            str += "  "
+        }
+        console.log(str + n.name);
+        const nodeTree = document.createElement("li");
+        nodeTree.textContent = `${n.name} - [${nodeIdx}]`;
+        elem.appendChild(nodeTree);
+        if(n.children){
+            const childList = document.createElement("ul");
+        nodeTree.appendChild(childList);
+            n.children.forEach(c=>this.printNode(gltf,c,depth+1,childList));
+        }
     }
 
     private onFrame(time: number) {
