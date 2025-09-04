@@ -7,7 +7,6 @@ export type Gltf = {
     scene: number,
     scenes: GltfScene[],
     nodes: GltfNode[],
-    animations: any[],
     materials: GltfMaterial[],
     meshes: GltfMesh[],
     skins: any[],
@@ -15,7 +14,8 @@ export type Gltf = {
     bufferViews: GltfBufferView[],
     buffers: GltfBuffer[],
     images: GltfImage[],
-    textures: GltfTexture[]
+    textures: GltfTexture[],
+    animations?: GltfAnimation[];
 }
 
 export type GltfTexture = {
@@ -86,4 +86,24 @@ export type GltfNode = {
 export type GltfScene = {
     name?: string,
     nodes: number[]
+}
+
+export type GltfAnimation = {
+    samplers: GltfAnimationSampler[],
+    channels: GltfAnimationChannel[]
+}
+
+export type GltfAnimationSampler = {
+    input: number, // index of buffer view for times
+    output: number, // index of buffer view for values
+    interpolation: "LINEAR" // TODO add others
+}
+
+export type GltfAnimationChannel = {
+    sampler: number, // index of sampler
+    target: {
+        node: number, // index of .nodes
+        path: "rotation" | "scale" | "translation",
+    },
+    name?: string
 }

@@ -12,6 +12,7 @@ const DEMOS: [string, string][] = [
     ["/assets/notmine/", "scene.gltf"],
     ["/assets/car/", "untitled.gltf"],
     ["/assets/", "textured_cube.gltf"],
+    ["/assets/", "anim_cube.gltf"],
     ["/assets/", "room.gltf"]
 ]
 
@@ -180,6 +181,8 @@ export class MainComponent extends HTMLElement {
         gl.frontFace(gl.CW);
         gl.cullFace(gl.BACK);
         gl.enable(gl.DEPTH_TEST);
+
+        this.gltf.applyAnim((time  %1000)/24*50/1000);
 
         const world = mat4.fromRotation(mat4.create(), time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
         mat4.rotate(world, world, Math.PI, [0, 0, 1]);

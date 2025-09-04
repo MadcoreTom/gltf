@@ -1,8 +1,9 @@
 import { mat4, ReadonlyMat4 } from "gl-matrix";
-import { Gltf, GltfAcceesor, GltfBufferView, GltfMaterial, GltfMeshPrimitive, GltfNode } from "./schema";
+import { Gltf, GltfAcceesor, GltfAnimation, GltfBufferView, GltfMaterial, GltfMeshPrimitive, GltfNode } from "./schema";
 import { Shader } from "./shader";
 import { getGlTypeForComponentType } from "./util";
 import { TextureCache } from "./textureCache";
+import { Animation ,AnimationChannelVec3 } from "./animation";
 
 export class GltfWrapper {
     private nodeNames: Map<string, number> = new Map();
@@ -12,13 +13,18 @@ export class GltfWrapper {
     private nodeMats: mat4[] = [];
     private innerMaterials: ShaderWrapper[] = [];
     private innerTextures: WebGLTexture[] = [];
+    private animationBufferViews: Float32Array[] = [];
+    private innerAnimations: Animation[] = [];
     public constructor(private readonly gl: WebGL2RenderingContext, public readonly gltf: Gltf, private readonly baseUrl:string, private readonly textureCache?: TextureCache) {
+
         gltf.nodes.forEach((n, i) => {
             this.nodeNames.set(n.name as string, i);
         });
+
         gltf.meshes.forEach((m, i) => {
             m.name != null && this.meshNames.set(m.name, i);
         });
+
         if (textureCache && gltf.images) {
             gltf.images.forEach((img, i) => {
                 console.log("IMAGE", img);
@@ -28,10 +34,28 @@ export class GltfWrapper {
         console.log(this);
     }
 
+    private loadAnimation(animation:GltfAnimation, idx:number){
+        const innerAnim :Animation = {};
+        animation.channels.forEach(channel => {
+
+            const sampler = animation.samplers[channel.sampler];
+            const time = this.animationBufferViews[sampler.input];
+            const value = this.animationBufferViews[sampler.output];
+            switch(channel.target.path){
+                case "scale":
+                    innerAnim.scale = new AnimationChannelVec3(channel, time, value);
+                    break;
+            }
+        });
+        this.innerAnimations[idx] = innerAnim;
+    }
+
     public addBuffer(data: ArrayBuffer, bufferIdx: number): GltfWrapper {
         const bufferViews = this.gltf.bufferViews
             .map((bv, i) => [bv, i] as [GltfBufferView, number])
             .filter(([bv]) => bv.buffer == bufferIdx);
+
+        // TODO could build a list of referenced bufferviews from primitives, and another for references via animations
 
         bufferViews.forEach(([bv, i]) => {
             // TODO i know these numbers map to these enums of the same ordinal value
@@ -43,6 +67,32 @@ export class GltfWrapper {
             console.log("Loaded buffer view", i, "type", bufType, slice);
             this.bufferViews[i] = buf;
         });
+
+
+        // then load animation buffers
+        if (this.gltf.animations) {
+            this.gltf.animations.forEach(anim => {
+                console.log("anim", anim)
+                anim.channels.forEach(ch => {
+
+                    console.log("channel", ch);
+                    const {input, output} = anim.samplers[ch.sampler]; // these are buffer view indexes
+                    [input, output].forEach(bufferViewIdx => {
+                        const bv = this.gltf.bufferViews[bufferViewIdx];
+                        const slice = data.slice(bv.byteOffset, bv.byteOffset + bv.byteLength);
+                        this.animationBufferViews[bufferViewIdx] = new Float32Array(slice);
+                    })
+                });
+            })
+        }
+
+        // TODO this happens after buffers are laoded, but will potentially replacer some or run multiple times if there are more than one buffer
+        
+
+        if(this.gltf.animations){
+            this.gltf.animations.forEach((a,i) => this.loadAnimation(a, i));
+        }
+
 
         return this;
     }
@@ -175,6 +225,20 @@ export class GltfWrapper {
         if (node.children) {
             node.children.forEach(child => this.walkNode(child, camera, mat, [...depth, nodeIdx]));
         }
+    }
+
+    
+    public applyAnim(time:number) {
+       this.gltf.animations?.forEach((animation, ai)=>{
+        const anim = this.innerAnimations[ai];
+        if(anim.scale){
+            const node = this.gltf.nodes[anim.scale.gltfChannel.target.node];
+            node.scale = anim.scale.getValueAtTime(time);
+            // console.log(node.scale)
+            // invalidate cache mat
+            delete this.nodeMats[anim.scale.gltfChannel.target.node];
+        }
+       })
     }
 
 }
