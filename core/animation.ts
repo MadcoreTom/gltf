@@ -58,5 +58,5 @@ export class AnimationChannelVec3 extends AnimationChannel<vec3> {
 export type Animation = {
     // rotation?:AnimationChannel,
     scale?: AnimationChannelVec3,
-    // translation?:AnimationChannel,
+    translation?:AnimationChannelVec3,
 }

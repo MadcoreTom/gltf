@@ -45,6 +45,9 @@ export class GltfWrapper {
                 case "scale":
                     innerAnim.scale = new AnimationChannelVec3(channel, time, value);
                     break;
+                case "translation":
+                    innerAnim.translation = new AnimationChannelVec3(channel, time, value);
+                    break;
             }
         });
         this.innerAnimations[idx] = innerAnim;
@@ -227,18 +230,23 @@ export class GltfWrapper {
         }
     }
 
-    
-    public applyAnim(time:number) {
-       this.gltf.animations?.forEach((animation, ai)=>{
-        const anim = this.innerAnimations[ai];
-        if(anim.scale){
-            const node = this.gltf.nodes[anim.scale.gltfChannel.target.node];
-            node.scale = anim.scale.getValueAtTime(time);
-            // console.log(node.scale)
-            // invalidate cache mat
-            delete this.nodeMats[anim.scale.gltfChannel.target.node];
-        }
-       })
+
+    public applyAnim(time: number) {
+        this.gltf.animations?.forEach((animation, ai) => {
+            const anim = this.innerAnimations[ai];
+            if (anim.scale) {
+                const node = this.gltf.nodes[anim.scale.gltfChannel.target.node];
+                node.scale = anim.scale.getValueAtTime(time);
+                // invalidate cache mat
+                delete this.nodeMats[anim.scale.gltfChannel.target.node];
+            }
+            if (anim.translation) {
+                const node = this.gltf.nodes[anim.translation.gltfChannel.target.node];
+                node.translation = anim.translation.getValueAtTime(time);
+                // invalidate cache mat
+                delete this.nodeMats[anim.translation.gltfChannel.target.node];
+            }
+        })
     }
 
 }
