@@ -3,7 +3,7 @@ import { Gltf, GltfAcceesor, GltfAnimation, GltfBufferView, GltfMaterial, GltfMe
 import { Shader } from "./shader";
 import { getGlTypeForComponentType } from "./util";
 import { TextureCache } from "./textureCache";
-import { Animation ,AnimationChannelVec3 } from "./animation";
+import { Animation ,AnimationChannelQuat,AnimationChannelVec3 } from "./animation";
 
 export class GltfWrapper {
     private nodeNames: Map<string, number> = new Map();
@@ -47,6 +47,9 @@ export class GltfWrapper {
                     break;
                 case "translation":
                     innerAnim.translation = new AnimationChannelVec3(channel, time, value);
+                    break;
+                case "rotation":
+                    innerAnim.rotation = new AnimationChannelQuat(channel, time, value);
                     break;
             }
         });
@@ -245,6 +248,12 @@ export class GltfWrapper {
                 node.translation = anim.translation.getValueAtTime(time);
                 // invalidate cache mat
                 delete this.nodeMats[anim.translation.gltfChannel.target.node];
+            }
+            if (anim.rotation) {
+                const node = this.gltf.nodes[anim.rotation.gltfChannel.target.node];
+                node.rotation = anim.rotation.getValueAtTime(time);
+                // invalidate cache mat
+                delete this.nodeMats[anim.rotation.gltfChannel.target.node];
             }
         })
     }

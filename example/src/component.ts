@@ -21,7 +21,7 @@ export class MainComponent extends HTMLElement {
     private gl: WebGL2RenderingContext;
     private gltf: GltfWrapper;
     private textureCache: TextureCache;
-    private shadowRoot: ShadowRoot;
+    shadowRoot: ShadowRoot;
 
     constructor() {
         super();
@@ -182,7 +182,7 @@ export class MainComponent extends HTMLElement {
         gl.cullFace(gl.BACK);
         gl.enable(gl.DEPTH_TEST);
 
-        this.gltf.applyAnim((time  %1000)/24*50/1000);
+        this.gltf.applyAnim((time % 1000) / 24 * 50 / 1000);
 
         const world = mat4.fromRotation(mat4.create(), time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
         mat4.rotate(world, world, Math.PI, [0, 0, 1]);
