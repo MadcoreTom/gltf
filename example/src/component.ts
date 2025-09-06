@@ -200,10 +200,9 @@ export class MainComponent extends HTMLElement {
         const world = mat4.clone(this.worldRot);
         mat4.multiply(world, world, this.worldRotTmp);
 
-        if(this.autoRotate){
-                   mat4.fromRotation(world, time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
-        mat4.rotate(world, world, Math.PI, [0, 0, 1]);
-
+        if (this.autoRotate) {
+            mat4.fromRotation(world, time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
+            mat4.rotate(world, world, Math.PI, [0, 0, 1]);
         }
         const camera = mat4.translate(mat4.create(), mat4.perspective(mat4.create(), 80, 1, 0.1, 100), [0, 0, -2]);
 
