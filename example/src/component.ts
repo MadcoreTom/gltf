@@ -1,4 +1,4 @@
-import { mat4, vec3, vec4 } from "gl-matrix";
+import { mat4, quat, vec2, vec3, vec4 } from "gl-matrix";
 import { load } from "../../core/parser";
 import { ShaderBuilder } from "../../core/shader";
 import { GltfWrapper, ShaderWrapper } from "../../core/wrapper";
@@ -22,6 +22,12 @@ export class MainComponent extends HTMLElement {
     private gltf: GltfWrapper;
     private textureCache: TextureCache;
     shadowRoot: ShadowRoot;
+    private mouseDownPos : vec2|null = null;
+    private width: number = 100;
+    private height: number = 100;
+    private worldRot:mat4 = mat4.create();
+    private worldRotTmp:mat4 = mat4.create();
+    private autoRotate = true;
 
     constructor() {
         super();
@@ -37,11 +43,12 @@ export class MainComponent extends HTMLElement {
         this.canvas = document.createElement("canvas");
         this.canvas.width = vw;
         this.canvas.height = vh;
+        this.width = vw;
+        this.height = vh;
         shadowRoot.appendChild(this.canvas);
 
         // handlers
-        this.canvas.addEventListener("click", evt => { this.onClick(evt.offsetX, evt.offsetY, true) });
-        this.canvas.addEventListener("contextmenu", evt => { this.onClick(evt.offsetX, evt.offsetY, false); evt.preventDefault() });
+        this.canvas.addEventListener("contextmenu", evt => {  evt.preventDefault() });
 
         // list demos
         const list = document.createElement("ul");
@@ -65,6 +72,12 @@ export class MainComponent extends HTMLElement {
         this.gl = this.canvas.getContext("webgl2") as WebGL2RenderingContext;
         this.textureCache = new TextureCache(this.gl); 
         this.load(...demo[0]);
+    
+        // add mouse listeners
+        this.canvas.addEventListener("mousedown", evt => this.mouseDown(evt));
+        this.canvas.addEventListener("mouseup", evt => this.mouseUp(evt));
+        this.canvas.addEventListener("mouseout", evt => this.mouseOut(evt));
+        this.canvas.addEventListener("mousemove", evt => this.mouseMove(evt));
     }
 
     private async load(dir: string, name: string) {
@@ -184,16 +197,80 @@ export class MainComponent extends HTMLElement {
 
         this.gltf.applyAnim((time % 1000) / 24 * 50 / 1000);
 
-        const world = mat4.fromRotation(mat4.create(), time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
+        const world = mat4.clone(this.worldRot);
+        mat4.multiply(world, world, this.worldRotTmp);
+
+        if(this.autoRotate){
+                   mat4.fromRotation(world, time / 1000, vec3.normalize(vec3.create(), [-3, 2 + 9 * Math.sin(time / 2000), -1]));
         mat4.rotate(world, world, Math.PI, [0, 0, 1]);
+
+        }
         const camera = mat4.translate(mat4.create(), mat4.perspective(mat4.create(), 80, 1, 0.1, 100), [0, 0, -2]);
 
-        // gltf.drawMeshById(0, world, camera);
         gltf.drawScene(0, camera, world);
         window.requestAnimationFrame(t => this.onFrame(t));
     }
 
-    private onClick(x: number, y: number, left: boolean) {
-        console.log("CLICK", x, y);
+    /**
+     * Updates the temporary rotation matric
+     */
+    mouseDrag(start: vec2, end: vec2) {
+        const a = this.mouseToVec3(start);
+        const b = this.mouseToVec3(end);
+            const rotAngle = 2 * Math.acos(Math.min(1.0, vec3.dot(a, b)));
+        const rotAxis = vec3.normalize(vec3.create(), vec3.cross(vec3.create(), a, b)); // Normalize may be redundant
+        mat4.fromRotation(this.worldRotTmp, rotAngle, rotAxis);
+        // vec2.copy(start, end);
+        this.autoRotate = false;
+    }
+
+    /**
+     * Converts a mouse position on screen (-1 to 1) to a 3d point on a unit sphere
+     */
+    private mouseToVec3(mouse: vec2): vec3 {
+        const lenSq = mouse[0] * mouse[0] + mouse[1] * mouse[1];
+        const v: vec3 = [
+            -mouse[0],
+            -mouse[1],
+            0,
+        ];
+        if (lenSq <= 1) {
+            v[2] = Math.sqrt(1 - lenSq);
+        } else {
+            vec3.normalize(v, v);
+        }
+        return v;
+    }
+
+    
+    private mouseDown(evt: MouseEvent) {
+        this.mouseDownPos = [
+            (evt.offsetX / this.width) * 2 - 1,
+            -((evt.offsetY / this.height) * 2 - 1)
+        ];
+    }
+
+    private mouseUp(evt: MouseEvent) {
+        this.mouseDownPos = null
+        mat4.multiply(this.worldRot,this.worldRot,this.worldRotTmp);
+        mat4.identity(this.worldRotTmp);
+    }
+
+    private mouseOut(evt: MouseEvent) {
+        if (this.mouseDownPos) {
+            this.mouseDownPos = null;
+        }
+        mat4.multiply(this.worldRot,this.worldRot,this.worldRotTmp);
+        mat4.identity(this.worldRotTmp);
+    }
+
+    private mouseMove(evt: MouseEvent) {
+        if (this.mouseDownPos) {
+            const mouseEnd: vec2 = [
+                (evt.offsetX / this.width) * 2 - 1,
+                -((evt.offsetY / this.height) * 2 - 1)
+            ];
+            this.mouseDrag(this.mouseDownPos, mouseEnd);
+        }
     }
 }
